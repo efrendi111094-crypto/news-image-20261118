@@ -228,7 +228,7 @@ class Canvas:
             self.line(cx, cy, cx + c, cy + s, color, thick=3)
         self.disc(cx, cy, max(3, radius // 3), color)
 
-    def text(self, x, y, s, color, string, align='left'):
+    def text(self, x, y, s, color, string, align='left', bold=False):
         string = string.upper()
         if align == 'center':
             x -= text_width(string, s) // 2
@@ -241,8 +241,14 @@ class Canvas:
                 for col in range(5):
                     if glyph[row][col] == '1':
                         self.rect(gx + col * s, y + row * s, s, s, color)
+                        if bold:
+                            # Thicken each stroke by 1px right and down:
+                            # stays inside the inter-glyph / inter-line gaps,
+                            # so layout and wrapping never change.
+                            self.rect(gx + col * s + s, y + row * s, 1, s, color)
+                            self.rect(gx + col * s, y + row * s + s, s, 1, color)
 
-    def para(self, x, y, w, scale, color, string, leading=None, max_lines=None):
+    def para(self, x, y, w, scale, color, string, leading=None, max_lines=None, bold=False):
         """Wrapped paragraph; returns the y just below the last line."""
         if leading is None:
             leading = 7 * scale + 3
@@ -250,7 +256,7 @@ class Canvas:
         if max_lines:
             lines = lines[:max_lines]
         for i, line in enumerate(lines):
-            self.text(x, y + i * leading, scale, color, line)
+            self.text(x, y + i * leading, scale, color, line, bold=bold)
         return y + len(lines) * leading
 
 
@@ -267,6 +273,13 @@ def icon_gulf(cv, x, y, w, h):
     # Island in the strait.
     cv.disc(x + 190, y + 150, 22, SAND)
     cv.disc(x + 190, y + 150, 14, (196, 172, 110))
+    # Red target ring on the island + map labels, so the scene reads as
+    # the Gulf (Qeshm in the Strait of Hormuz) instead of abstract shapes.
+    cv.ring(x + 190, y + 150, 28, RED, thick=3)
+    cv.text(x + 161, y + 108, 2, WHITE, 'QESHM')
+    cv.text(x + 20, y + 232, 2, WHITE, 'STRAIT OF HORMUZ')
+    cv.text(x + 14, y + 36, 2, INK, 'IRAN')
+    cv.text(x + 250, y + 232, 2, INK, 'ARABIA')
     # Route dashes across the strait.
     for i in range(6):
         cv.rect(x + 40 + i * 48, y + 210 - i * 8, 22, 5, WHITE)
@@ -419,7 +432,7 @@ def render(data):
     cv.border(28, 152, 360, 264, INK, 2)
     cv.text(412, 168, 2, RED, lead['kicker'])
     cv.para(412, 196, 576, 4, INK, lead['headline'], leading=34)
-    cv.para(412, 312, 576, 2, INK, lead['summary'], leading=17)
+    cv.para(412, 312, 576, 2, INK, lead['summary'], leading=17, bold=True)
 
     # Row 2: two half-width cards.
     for i, story in enumerate(data['row2']):
@@ -431,7 +444,7 @@ def render(data):
         cv.border(cx + 10, cy + 10, 76, 76, INK, 1)
         cv.text(cx + 98, cy + 14, 2, RED, story['kicker'])
         cv.para(cx + 98, cy + 36, 368, 3, INK, story['headline'], leading=24)
-        cv.para(cx + 12, cy + 112, 454, 2, INK, story['summary'], leading=17)
+        cv.para(cx + 12, cy + 112, 454, 2, INK, story['summary'], leading=17, bold=True)
 
     # Row 3: three third-width cards.
     for i, story in enumerate(data['row3']):
@@ -442,8 +455,8 @@ def render(data):
         ICONS[story['icon']](cv, cx + 10, cy + 10, 56, 56)
         cv.border(cx + 10, cy + 10, 56, 56, INK, 1)
         cv.text(cx + 76, cy + 12, 2, RED, story['kicker'])
-        cv.para(cx + 76, cy + 32, 226, 2, INK, story['headline'], leading=17, max_lines=3)
-        cv.para(cx + 12, cy + 84, 288, 2, INK, story['summary'], leading=17, max_lines=4)
+        cv.para(cx + 76, cy + 32, 226, 2, INK, story['headline'], leading=17, max_lines=3, bold=True)
+        cv.para(cx + 12, cy + 84, 288, 2, INK, story['summary'], leading=17, max_lines=4, bold=True)
 
     # Footer: also-today ticker, markets, and the date note.
     cv.hline(24, 868, W - 48, INK, 3)
